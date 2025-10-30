@@ -1,0 +1,23 @@
+{
+  "name": "greatsoft-implementation-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for GreatSoft client implementation",
+  "type": "module",
+  "main": "build/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "mssql": "^11.0.1",
+    "xlsx": "^0.18.5",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/mssql": "^9.1.5",
+    "@types/uuid": "^10.0.0",
+    "typescript": "^5.7.2"
+  }
+}
