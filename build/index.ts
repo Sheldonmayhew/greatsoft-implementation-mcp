@@ -41,27 +41,27 @@ class GreatSoftImplementation {
   private pool: sql.ConnectionPool | null = null;
   private countryID: number = 1;
 
-constructor(config: ConnectionConfig) {
-  // Extract instance name from server if present (e.g., "localhost\SQLEXPRESS17")
-  let serverName = config.server;
-  let instanceName: string | undefined = undefined;
-  
-  if (serverName.includes('\\')) {
-    const parts = serverName.split('\\');
-    serverName = parts[0];
-    instanceName = parts[1];
-  }
-  
-  this.config = {
-    ...config,
-    server: serverName,
-    options: {
-      encrypt: true,
-      trustServerCertificate: true,
-      instanceName: instanceName,
-      ...config.options,
-    },
-  } as any;
+  constructor(config: ConnectionConfig) {
+    // Extract instance name from server if present (e.g., "localhost\SQLEXPRESS17")
+    let serverName = config.server;
+    let instanceName: string | undefined = undefined;
+    
+    if (serverName.includes('\\')) {
+      const parts = serverName.split('\\');
+      serverName = parts[0];
+      instanceName = parts[1];
+    }
+    
+    this.config = {
+      ...config,
+      server: serverName,
+      options: {
+        encrypt: true,
+        trustServerCertificate: true,
+        instanceName: instanceName,
+        ...config.options,
+      },
+    } as any;
   }
 
   async connect(): Promise<void> {
@@ -432,7 +432,21 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           required: ["scriptPath"],
         },
       },
-      
+      {
+        name: "execute_sql",
+        description:
+          "Execute a SQL query or script directly. Useful for running setup scripts with parameters.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            query: {
+              type: "string",
+              description: "SQL query or script to execute",
+            },
+          },
+          required: ["query"],
+        },
+      },
       {
         name: "import_offices",
         description:
@@ -513,6 +527,44 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           },
         ],
       };
+    }
+
+    if (request.params.name === "execute_sql") {
+      const args = request.params.arguments as any;
+      
+      try {
+        await implementation.connect();
+        
+        const query = args.query;
+        
+        const batches = query
+          .split(/^\s*GO\s*$/gim)
+          .map((batch: string) => batch.trim())
+          .filter((batch: string) => batch.length > 0);
+
+        for (const batch of batches) {
+          await (implementation as any).pool.request().query(batch);
+        }
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: `✓ SQL executed successfully (${batches.length} batch(es))`,
+            },
+          ],
+        };
+      } catch (error: any) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `❌ SQL Error: ${error.message}`,
+            },
+          ],
+          isError: true,
+        };
+      }
     }
 
     if (request.params.name === "import_offices") {
